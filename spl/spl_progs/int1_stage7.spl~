@@ -1,0 +1,88 @@
+alias physicalsp S0;
+
+physicalsp = ([PTBR + (SP/512) * 2]  * 512) + (SP %512);
+
+alias syscall S1;
+
+syscall = [physicalsp -1] ;
+
+if(syscall == 1) 
+	then 
+	print("file is yet tobe created");
+	alias filename S2;
+	alias i S3;
+	
+	filename = [physicalsp - 3];
+	i=0;
+	while( i< 64) do // checking file in FAT
+		if ( filename == [FAT + i*8] )
+			then 
+			print("File existed");
+			[physicalsp - 2] = 0;
+			ireturn;
+			
+			else 
+			i=i+1;
+		endif;
+	endwhile;
+	
+	i=24;
+	while(i<=447) do // checking free space in disk_list
+		if( [DISK_LIST + i] == 0 )
+			then break;
+			else i=i+1;
+		endif;
+	endwhile;
+	
+	if( i == 448 ) then 
+		print(" NO FREE SPACE ");
+		[physicalsp - 2] = -1;
+	endif;
+	
+	alias j S4;
+	
+	j=0;
+	
+	while( j < 64 ) do // checking free space in FAT	
+		if( [FAT + j * 8] == -1) 
+			then break;
+			else j = j + 1;
+		endif;
+	endwhile;
+	
+	if( j == 64) 
+		then print(" NO SPACE IN FAT");
+		[physicalsp - 2] = -1;
+		ireturn;
+	endif;
+	
+	[ FAT + 8 * j] = filename; // loading file into FAT
+	[ FAT + 8*j +1] = 0;
+	[ FAT + 8*j +2] = i;
+	
+	load(1,i); //loading basic bloack to disk
+	
+	j = 0;
+	while( j < 256 ) do //setting data blocks in basic block -1
+		[ SCRATCHPAD + j ] = -1;
+		j= j + 1;
+	endwhile;
+	
+	store ( 1, i ); //storing basic block in disk
+	
+	[DISK_LIST + i] = 1; //setting block to 1;
+	
+	store (6,20); // storing disk free list
+	store (5,19); //storing FAT in disk
+	
+	[physicalsp - 2] = 0;
+	print("FILE IS CREATED");
+	ireturn;
+	
+	else 
+	
+	print("COMING SOON");
+	[physicalsp - 2] = -1;
+	ireturn;
+endif;
+	

@@ -1,0 +1,118 @@
+alias physicalsp S0;
+physicalsp=([PTBR +(SP/512)*2]*512)+(SP%512);  //getting physical address of SP
+alias syscall S1;
+syscall = [physicalsp-1]; //getting syscall from Stack
+
+if(syscall==2) then //syscall is opening a file
+
+	alias filename S2;
+	filename=[physicalsp-3];
+	alias fatindex S3;
+	fatindex=0;
+	
+	while(fatindex<64) do //checking for file
+	if([FAT+fatindex*8] == filename) 
+	then break;
+	else fatindex=fatindex+1;
+	endif;
+	endwhile;
+	
+	if(fatindex==64) then //file not existed
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias systemindex S4;
+	systemindex=0;
+	while(systemindex<64) do //checking file already opened
+	if([FILE_TABLE+systemindex*2]==fatindex)
+	then break;
+	else systemindex=systemindex+1;
+	endif;
+	endwhile;
+	
+	if(systemindex==64) then
+	systemindex=0;
+	while(systemindex<64) do //checking free slot
+	if([FILE_TABLE+systemindex*2]==-1)
+	then break;
+	else systemindex=systemindex+1;
+	endif;
+	endwhile;
+	endif;
+	
+	if(systemindex==64) then
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias pid S5;
+	pid = (PTBR - 1024)/8;
+	
+	alias processindex S6;
+	processindex=0;
+	while(processindex<8) do //checking free slot in per process open file table
+if([READY_LIST+pid*32+15+processindex*2]==-1)
+	then break;
+	else processindex=processindex+1;
+	endif;
+	endwhile;
+	
+	if(processindex==8)
+	then
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	[READY_LIST+pid*32+15+processindex*2]=systemindex;
+	[READY_LIST+pid*32+16+processindex*2]=0;  //setting file in perprocess open file table
+	
+	if([FILE_TABLE+systemindex*2]==-1)
+	then 
+	[FILE_TABLE+systemindex*2]=fatindex;
+	[FILE_TABLE+systemindex*2+1]=1;	
+	else 
+	[FILE_TABLE+systemindex*2+1]=1+[FILE_TABLE+systemindex*2+1];
+	endif; //setting in systemwide open file table
+	
+	[physicalsp-2]=processindex;
+	ireturn;
+	
+	else //syscall is closing a file...
+	
+	alias filedescriptor S2;
+	filedescriptor= [physicalsp-3];
+	
+	if(filedescriptor<0 || filedescriptor > 7) //checking filedescriptor is valid r not
+	then 
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias pid S5;
+	pid = (PTBR - 1024)/8;
+	alias systemindex S3;
+	systemindex=[READY_LIST + pid*32 +15 + filedescriptor*2];
+	if(systemindex==-1)
+	then 
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	if([FILE_TABLE+systemindex*2 +1]==1)
+	then 
+	[FILE_TABLE+systemindex*2 +1]=0;
+	[FILE_TABLE+systemindex*2 ]=-1;
+	
+	else 
+	[FILE_TABLE+systemindex*2 +1]=[FILE_TABLE+systemindex*2] -1;
+	
+	endif;
+	[READY_LIST + pid*32 +15 + filedescriptor*2]=-1;
+	[READY_LIST + pid*32 +16 + filedescriptor*2]=0;
+	[physicalsp-2]=0;
+	ireturn;
+endif;
+	
+	
+	

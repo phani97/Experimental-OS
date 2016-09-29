@@ -1,0 +1,122 @@
+alias physicalsp S0;
+//print"1";
+physicalsp=([PTBR+ (SP/512) *2]*512) + (SP%512);  //getting stackaddress.....
+
+alias syscall S1;
+
+syscall=[physicalsp-1]; //getting syscall.....
+
+if(syscall==8) then //checking fork .....
+
+	alias newpid S2;
+	newpid=0;
+	
+	while(newpid<32 && [READY_LIST + newpid*32 + 1]!=0) do //getting free pcb slot..... 
+		newpid=newpid+1;
+	endwhile;
+	//print(newpid);
+	if(newpid==32) then //no free pcb slot.....
+		//print("nofree");
+		[physicalsp-2]=-1;
+		ireturn;
+	endif;
+	
+	alias count_datablocks S3;
+	count_datablocks=0;
+	alias i S4;
+	alias j S5;
+	
+	//print("2");
+	
+	i=0;
+	while( i<4 ) do // getting count of valid datablocks.....
+		if([PTBR+i*2+1]!="00") then
+			count_datablocks=count_datablocks+1;
+		endif;
+		i=i+1;
+	endwhile;
+	
+	//print("3");
+	//print(count_datablocks);
+	j=count_datablocks;
+	i=0;
+	while(j!=0 && i<64) do //checking freeblocks for free process
+		if([MEM_LIST+i]==1) then 
+			j=j-1;
+		endif;
+		i=i+1;
+	endwhile;
+	
+	if(j!=0) then //no free block.....
+		[physicalsp-2]=-1;
+		ireturn;
+	endif;
+	
+	 i=0;j=0;
+	 alias k S6;
+	 while(i<4) do //duplicating all files
+	 	if([PTBR+i*2]!=-1) then 
+	 		while([MEM_LIST+j]==1) do //getting free diskblock
+	 			j=j+1;
+	 		endwhile;
+	 		
+	 		[PAGE_TABLE+newpid*8+i*2]=j;
+	 		[PAGE_TABLE+newpid*8+i*2+1]=[PTBR+i*2+1];
+	 		k=0;
+	 		while(k<256) do //copying file.....
+	 			[j*512+k]=[[PTBR+i*2]*512 +k];
+	 			k=k+1;
+	 		endwhile;
+	 		
+	 		[MEM_LIST+j]=1;  //setting block in mem list
+	 		
+	 		else 
+	 		[PAGE_TABLE+newpid*8+i*2]=[PTBR+i*2];
+	 		[PAGE_TABLE+newpid*8+i*2+1]=[PTBR+i*2+1];
+	 	endif;
+	 	i=i+1;
+	 endwhile;
+	 
+	 alias curpid S7;
+	 curpid=(PTBR-1024)/8;
+	 
+	 [READY_LIST+newpid*32]=newpid;    //setting newpcb
+	 [READY_LIST+newpid*32+1]=1;
+	 [READY_LIST+newpid*32+2]=BP;
+	 [READY_LIST+newpid*32+3]=SP-1;
+	 [READY_LIST+newpid*32+4]=[physicalsp];
+	 [READY_LIST+newpid*32+5]=PAGE_TABLE+newpid*8;
+	 [READY_LIST+newpid*32+6]=PTLR;
+	 [READY_LIST+newpid*32+7]=R0;
+	 [READY_LIST+newpid*32+8]=R1;
+	 [READY_LIST+newpid*32+9]=R2;
+	 [READY_LIST+newpid*32+10]=R3;
+	 [READY_LIST+newpid*32+11]=R4;
+	 [READY_LIST+newpid*32+12]=R5;
+	 [READY_LIST+newpid*32+13]=R6;
+	 [READY_LIST+newpid*32+14]=R7;
+	 
+	 j=0;
+	 while(j<8) do //setting perprocess file table for newprocess...
+	 	[READY_LIST+newpid*32+15+j*2]=[READY_LIST+curpid*32+15+j*2];
+	 	[READY_LIST+newpid*32+16+j*2]=[READY_LIST+curpid*32+16+j*2];
+	 	
+	 	alias sysindex S8;
+	 	sysindex=[READY_LIST+curpid*32+15+j*2];
+	 	
+	 	if(sysindex!=-1) then //incrementing filecount
+	 		[FILE_TABLE+sysindex*2+1]=1+[FILE_TABLE+sysindex*2+1];
+	 	endif;
+	 	
+	 	j=j+1;
+	 endwhile;
+	 
+	 [physicalsp-2]=newpid; //return value for parent process.....
+	 
+	 physicalsp=([PAGE_TABLE+newpid*8+(SP/512)*2]*512)+(SP%512);
+	 
+	 [physicalsp-2]=-2;
+	 ireturn;
+endif;
+
+

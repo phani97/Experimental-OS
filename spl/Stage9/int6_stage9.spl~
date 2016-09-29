@@ -1,0 +1,126 @@
+alias physicalsp S0;
+
+physicalsp=([PTBR+2*(SP/512)]*512)+(SP%512);
+
+
+alias syscall S1;
+syscall=[physicalsp-1]; //getting syscall
+
+if(syscall==9) then //checking exec r not....
+
+	alias filename S2;
+	filename=[physicalsp-3];
+	
+	alias fatindex S3;
+	fatindex=0;
+	
+	while(fatindex<64 && [FAT+fatindex*8]!=filename) do //checking file existed or not....
+	
+		fatindex=fatindex+1;
+	endwhile;
+	
+	if(fatindex==64) then //file not existed in disk...
+		[physicalsp-2]=-1;
+		ireturn;
+	endif;
+	
+	alias count_newblocks S4;
+	count_newblocks=[FAT+fatindex*8+1]/512;
+	
+	alias count_validblocks S5;
+	count_validblocks=0;
+	
+	while(count_validblocks<3 && [PTBR+count_validblocks*2+1]!="00") do //getting count of valid blocks of existing process...
+	
+		count_validblocks=count_validblocks+1;
+	endwhile;
+	
+	if(count_validblocks < count_newblocks) then //checking that many free blocks in memory r not..
+		
+		alias i S6;
+		i=25;
+		while(i<64 && count_validblocks!=count_newblocks) do //getting req free blocks
+			if([MEM_LIST+i]==0) then 
+				count_validblocks=count_validblocks+1;
+			endif;
+			i=i+1;
+		endwhile;
+		
+		if(i==64) then 
+			[physicalsp-2]=-1;
+			ireturn;
+		endif;
+		
+	endif;
+	
+	alias basicblock S6;
+	basicblock=[FAT+fatindex*8+2];
+	
+	load(1,basicblock); //loading basicblock
+	
+	alias i S7;
+	alias j S8;
+	i=0;j=25;
+	while(i<3 && [SCRATCHPAD+i]!=-1) do //setting all files in memory
+
+		if([PTBR+i*2]!=-1) then
+			
+			load([PTBR+i*2],[SCRATCHPAD+i]);
+			[PTBR+i*2+1]="01";
+			
+		else 
+			while([MEM_LIST+j]!=0) do //searching for free block
+				j=j+1;
+			endwhile;
+			
+			[MEM_LIST+j]=1;
+			[PTBR+i*2]=j;
+			load(j,[SCRATCHPAD+i]);
+			[PTBR+i*2+1]="01";
+			
+		endif;
+		
+		i=i+1;
+	endwhile;
+			
+	while(i<3) do //setting PAGE_TABLE
+		if([PTBR+i*2+1]!="00") then
+			[MEM_LIST+[PTBR+i*2]]=0;
+		endif;
+		
+		[PTBR+i*2]=-1;
+		[PTBR+i*2+1]="00";
+		i=i+1;
+	endwhile;
+	
+	[PTBR+i*2+1]="01"; //setting auxilary info for stack
+	
+	SP=3*512;
+	[[PTBR+(SP/512)*2]*512]=0;
+	print("12");
+	alias pid S10;
+	alias sysindex S11;
+	pid=(PTBR-1024)/8;
+	i=0;
+	while(i<8) do //closing all files....
+		sysindex=[READY_LIST+pid*32+15+i*2];
+		
+		if(sysindex!=-1) then
+			[FILE_TABLE+sysindex*2+1]=[FILE_TABLE+sysindex*2+1]-1;
+			if([FILE_TABLE+sysindex*2+1]==0) then 
+				[FILE_TABLE+sysindex*2]=-1;
+			endif;
+			
+			[READY_LIST+pid*32+15+i*2]=-1;
+			[READY_LIST+pid*32+16+i*2]=0;
+		endif;
+		
+		i=i+1;
+	endwhile;
+	
+	ireturn;
+endif;
+	
+	
+		
+

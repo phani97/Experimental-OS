@@ -1,0 +1,34 @@
+alias physicalsp S0;
+physicalsp=([PTBR +(SP/512)*2]*512)+(SP%512);  //getting physical address of SP
+alias syscall S1;
+syscall = [physicalsp-1]; //getting syscall from Stack
+
+if(syscall==6) then //syscall is seek
+
+	alias newseek S2;
+	alias filedescriptor S3;
+	
+	newseek= [physicalsp-3];
+	filedescriptor= [physicalsp-4];
+	
+	if(filedescriptor<0 || filedescriptor > 7) //checking filedescriptor is valid r not
+	then 
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias pid S5;
+	pid = (PTBR - 1024)/8;
+	alias systemindex S4;
+	systemindex=[READY_LIST + pid*32 +15 + filedescriptor*2];
+	if(systemindex==-1)
+	then 
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias fatindex S6;
+	fatindex = [FILE_TABLE + systemindex*2];
+	
+	alias filesize S7;
+	

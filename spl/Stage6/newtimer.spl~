@@ -1,0 +1,73 @@
+alias currentpid S0;
+alias currentpcb S1;
+alias pa S2;
+alias pb S3;
+alias newPCB S4;
+//print("1");
+currentpid = (PTBR-1024)/8;
+
+currentpcb = (currentpid * 32 + 1536);
+
+[currentpcb+1]=1;
+
+[currentpcb + 2] = BP;
+
+[currentpcb + 3] = SP-1;
+
+[currentpcb + 5] = PTBR;
+
+[currentpcb + 6] = PTLR;
+
+pa = ([(PTBR + 2 * (SP / 512))] * 512) + ((SP) % 512);
+
+[currentpcb + 4] = [pa];
+
+[currentpcb + 7] = R0;
+
+[currentpcb + 8] = R1;
+
+[currentpcb + 9] = R2;
+
+[currentpcb + 10] = R3;
+
+[currentpcb + 11] = R4;
+
+[currentpcb + 12] = R5;
+
+[currentpcb + 13] = R6;
+
+[currentpcb + 14] = R7;
+
+newPCB=currentpcb+32;
+
+if(currentpid!=31)
+then
+newPCB=currentpcb+32;
+else newPCB=1536;
+endif;
+
+while([newPCB + 1]!=1) do 
+	if(newPCB!= READY_LIST + 31*32)
+	then
+	newPCB=newPCB+32;
+	else newPCB=READY_LIST;
+	endif;
+endwhile;
+PTLR=4;
+SP = [newPCB+3] + 1;
+PTBR=[newPCB+5];
+BP=[newPCB+2];
+R0=[newPCB+7];
+R1=[newPCB+8];
+R2=[newPCB+9];
+R3=[newPCB+10];
+R4=[newPCB+11];
+R5=[newPCB+12];
+R6=[newPCB+13];
+R7=[newPCB+14];
+pb = ([(PTBR + 2 * (SP / 512))] * 512) + (SP % 512);
+
+[pb] = [newPCB + 4];
+[newPCB + 1] = 2;
+ireturn;
+
