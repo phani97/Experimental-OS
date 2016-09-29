@@ -1,0 +1,9 @@
+decl
+	integer status,status2,status3;
+enddecl
+integer main()
+{
+	status = Open("myfile.dat");
+	print(status);
+	return 0;
+}
