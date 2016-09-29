@@ -5,11 +5,10 @@ physicalsp=([PTBR+(SP/512)*2]*512)+(SP%512);
 alias syscall S1;
 syscall=[physicalsp-1];
 
-alias cpid S2;
-cpid=(PTBR-1024)/8;
-
 if(syscall==10) then //checking exit or not.....
 
+	alias cpid S2;
+	cpid=(PTBR-1024)/8;
 	
 	alias cpcb S3;
 	alias newPCB S4;

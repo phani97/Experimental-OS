@@ -101,9 +101,11 @@ if(syscall==9) then //checking exec r not....
 	alias pid S10;
 	alias sysindex S11;
 	pid=(PTBR-1024)/8;
+	alias pcb S12;
+	pcb=READY_LIST+pid*32;
 	i=0;
 	while(i<8) do //closing all files....
-		sysindex=[READY_LIST+pid*32+15+i*2];
+		sysindex=[pcb+15+i*2];
 		
 		if(sysindex!=-1) then
 			[FILE_TABLE+sysindex*2+1]=[FILE_TABLE+sysindex*2+1]-1;
@@ -111,8 +113,8 @@ if(syscall==9) then //checking exec r not....
 				[FILE_TABLE+sysindex*2]=-1;
 			endif;
 			
-			[READY_LIST+pid*32+15+i*2]=-1;
-			[READY_LIST+pid*32+16+i*2]=0;
+			[pcb+15+i*2]=-1;
+			[pcb+16+i*2]=0;
 		endif;
 		
 		i=i+1;
