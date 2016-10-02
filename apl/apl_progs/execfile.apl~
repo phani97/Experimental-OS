@@ -1,11 +1,19 @@
 integer main()
 {
-integer pid;
-pid=Fork();
-print(pid);
-if(pid==-2) then
-	pid=Exec("even.xsm");
-	else pid=Exec("odd.xsm");
-endif;
-return 0;
+	integer pid;
+	print("Before Fork");
+	pid = Fork();
+print("After Fork");
+	if(pid!=-2) then
+		 Exit();
+		pid=Exec("odd.xsm");
+	else 
+		
+             pid=Exec("even.xsm");
+	    
+		print(pid);
+	endif;
+	return 0;
 }
+Chat conversation end
+
