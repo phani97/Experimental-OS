@@ -133,6 +133,7 @@ if(syscall==9) then //checking exec r not....
 				pid=(PTBR-1024)/8;
 				[physicalsp-2]=[READY_LIST+pid*32+31];
 				ireturn;
+			endif;
 		
 		endif;
 endif;
