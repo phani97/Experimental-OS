@@ -57,8 +57,8 @@ else if(syscall==13) then //syscall is waiting....
 			[physicalsp-2]=-1;
 			ireturn;
 		endif;
-		while([newPCB+1]!=1 || cpid==[newPCB]) do //checking dealock
-			if(cpid==[newPCB]) then
+		while([newPCB+1]!=1) do //checking dealock
+			if([newPCB+1]==2) then
 				
 				[physicalsp-2]=-1;
 				ireturn;

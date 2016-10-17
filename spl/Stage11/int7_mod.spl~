@@ -112,7 +112,7 @@ endif;
 
 	while([newPCB + 1]!=1 && newPCB!=curPCB) do 
 		if(newPCB!=READY_LIST+31*32) then
-		newPCB=newPCB+32;
+			newPCB=newPCB+32;
 		else newPCB=READY_LIST;
 		endif;
 	endwhile;

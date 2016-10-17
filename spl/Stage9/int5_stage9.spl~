@@ -55,7 +55,7 @@ if(syscall==8) then //checking fork .....
 	 i=0;j=0;
 	 alias k S6;
 	 while(i<4) do //duplicating all files
-	 	if([PTBR+i*2]!=-1) then 
+	 	if([PTBR+i*2+1]!="00") then 
 	 		while([MEM_LIST+j]==1) do //getting free diskblock
 	 			j=j+1;
 	 		endwhile;
