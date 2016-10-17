@@ -1,0 +1,144 @@
+alias physicalsp S0;
+
+physicalsp=([PTBR+(SP/512)*2]*512)+(SP%512);
+
+alias syscall S1;
+syscall=[physicalsp-1];
+
+alias cpid S2;
+cpid=(PTBR-1024)/8;
+alias newPCB S4;
+alias curPCB S5;
+curPCB=READY_LIST+cpid*32;
+if(syscall==10) then //checking exit or not.....
+
+	
+	alias cpcb S3;
+	
+	cpcb=READY_LIST+cpid*32;
+	[cpcb+1]=0;
+	
+	newPCB=1536;
+	while(newPCB<READY_LIST+32*32) do //setting state for waiting process....
+		if([newPCB+1]==100+cpid) then //changing state
+			[newPCB+1]=1;
+		endif;
+		newPCB=newPCB+32;
+	endwhile;
+	alias i S6;
+	alias sysindex S7;
+	i=0;
+	
+	while(i<8) do //closing all files....
+		sysindex=[cpcb+15+i*2];
+		
+		if(sysindex!=-1) then
+			[FILE_TABLE+sysindex*2+1]=[FILE_TABLE+sysindex*2+1]-1;
+			if([FILE_TABLE+sysindex*2+1]==0) then 
+				[FILE_TABLE+sysindex*2]=-1;
+			endif;
+			
+			[cpcb+15+i*2]=-1;
+			[cpcb+16+i*2]=0;
+		endif;
+		
+		i=i+1;
+	endwhile;
+	
+else if(syscall==13) then //syscall is waiting....
+		
+		alias waitingpid S3;
+		waitingpid=[physicalsp-3];
+		//print("IN wait");
+		newPCB=READY_LIST+waitingpid*32;
+		
+		if([newPCB+1]==0 || cpid==waitingpid) then //checking process is terminated or not....
+			
+			[physicalsp-2]=-1;
+			ireturn;
+		endif;
+		while([newPCB+1]!=1 || cpid==[newPCB]) do //checking dealock
+			if(cpid==[newPCB]) then
+				
+				[physicalsp-2]=-1;
+				ireturn;
+			endif;
+			newPCB=READY_LIST+32*([newPCB+1]-100);
+		
+		endwhile;
+		[READY_LIST+cpid*32+1]=100+waitingpid;
+		[physicalsp-2]=0;
+		
+		
+		[curPCB + 2]=BP;
+		[curPCB+3]=SP-1;
+		[curPCB + 4]=[physicalsp];
+		[curPCB + 5]=PTBR;
+		[curPCB + 6]=PTLR;
+		[curPCB + 7]=R0;
+		[curPCB + 8]=R1;
+		[curPCB + 9]=R2;
+		[curPCB + 10]=R3;
+		[curPCB + 11]=R4;
+		[curPCB + 12]=R5;
+		[curPCB + 13]=R6;
+		[curPCB + 14]=R7;
+		
+		
+	else if(syscall==14) then //syscall is signalling
+			
+			//print("IN signal");
+			newPCB=1536;
+			while(newPCB<READY_LIST+32*32) do //setting state for waiting process....
+				if([newPCB+1]==100+cpid) then //changing state
+					[newPCB+1]=1;
+				endif;
+				newPCB=newPCB+32;
+			endwhile;
+			
+			[physicalsp-2]=0;
+			ireturn;
+		endif;
+	endif;
+	
+	
+	
+endif;	
+	if(cpid!=31) then
+		newPCB=curPCB+32;
+	else
+	newPCB=1536;
+	endif;
+
+	while([newPCB + 1]!=1 && newPCB!=curPCB) do 
+		if(newPCB!=READY_LIST+31*32) then
+		newPCB=newPCB+32;
+		else newPCB=READY_LIST;
+		endif;
+	endwhile;
+	
+	if(newPCB==curPCB) then
+		halt;
+	endif;
+		
+	
+	
+	PTLR=4;
+	SP = [newPCB+3] + 1;  //setting new PCB .....
+	PTBR=[newPCB+5];
+	BP=[newPCB+2];
+	R0=[newPCB+7];
+	R1=[newPCB+8];
+	R2=[newPCB+9];
+	R3=[newPCB+10];
+	R4=[newPCB+11];
+	R5=[newPCB+12];
+	R6=[newPCB+13];
+	R7=[newPCB+14];
+	alias pb S5;
+	pb = ([(PTBR + 2 * (SP / 512))] * 512) + (SP % 512);
+
+	[pb] = [newPCB + 4];
+	[newPCB + 1] = 2;
+	ireturn;
+
