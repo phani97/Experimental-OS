@@ -9,12 +9,32 @@ print(a);
 a=Getppid();
 print(a);
 a=Fork();
-if(a!=-2) then
-	a=Wait(a);
-endif;
+print("forked");
+a=Fork();
 a=Getpid();
+if(a==0) then 
+	b=Wait(1);
+	if(b==0) then 
+		print(a); 
+		b=Exec("odd.xsm");
+	endif;
+else if(a==1) then
+		b=Wait(2);
+		if(b==0) then 
+			print(a);
+			b=Exec("even.xsm");
+		endif;
+	else if(a==2) then
+			b=Wait(3);
+			if(b==0) then 
+				print(a); 
+				b=Exec("odd.xsm");
+			endif;
+		
+		endif;
+	endif;
+endif;
 print(a);
-a=Getppid();
-print(a);
+
 return 0;
 }
