@@ -18,6 +18,7 @@ if(syscall==8) then //checking fork .....
 	if(newpid==32) then //no free pcb slot.....
 		//print("nofree");
 		[physicalsp-2]=-1;
+		breakpoint;
 		ireturn;
 	endif;
 	
@@ -49,6 +50,7 @@ if(syscall==8) then //checking fork .....
 	
 	if(j!=0) then //no free block.....
 		[physicalsp-2]=-1;
+		breakpoint;
 		ireturn;
 	endif;
 	
@@ -65,7 +67,7 @@ if(syscall==8) then //checking fork .....
 	 		[newptbr+i*2]=j;
 	 		[newptbr+i*2+1]=[PTBR+i*2+1];
 	 		k=0;
-	 		while(k<256) do //copying file.....
+	 		while(k<512) do //copying file.....
 	 			[j*512+k]=[[PTBR+i*2]*512 +k];
 	 			k=k+1;
 	 		endwhile;
@@ -123,6 +125,7 @@ if(syscall==8) then //checking fork .....
 	 physicalsp=([newptbr+(SP/512)*2]*512)+(SP%512);
 	 
 	 [physicalsp-2]=-2;
+	 breakpoint;
 	 ireturn;
 endif;
 

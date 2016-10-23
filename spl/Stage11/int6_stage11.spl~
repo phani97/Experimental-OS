@@ -21,7 +21,6 @@ if(syscall==9) then //checking exec r not....
 	
 	if(fatindex==64) then //file not existed in disk...
 		[physicalsp-2]=-1;
-		breakpoint;
 		ireturn;
 	endif;
 	

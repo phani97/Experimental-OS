@@ -55,12 +55,14 @@ else if(syscall==13) then //syscall is waiting....
 		if([newPCB+1]==0 || cpid==waitingpid) then //checking process is terminated or not....
 			
 			[physicalsp-2]=-1;
+			breakpoint;
 			ireturn;
 		endif;
-		while([newPCB+1]!=1 || cpid==[newPCB]) do //checking dealock
-			if(cpid==[newPCB]) then
+		while([newPCB+1]!=1) do //checking dealock
+			if([newPCB+1]==2) then
 				
 				[physicalsp-2]=-1;
+				breakpoint;
 				ireturn;
 			endif;
 			newPCB=READY_LIST+32*([newPCB+1]-100);
@@ -97,6 +99,7 @@ else if(syscall==13) then //syscall is waiting....
 			endwhile;
 			
 			[physicalsp-2]=0;
+			breakpoint;
 			ireturn;
 		endif;
 	endif;
@@ -140,5 +143,6 @@ endif;
 
 	[pb] = [newPCB + 4];
 	[newPCB + 1] = 2;
+	breakpoint;
 	ireturn;
 
