@@ -1,13 +1,15 @@
 integer main()
 {
 integer status;
-print("BEFORE Fork");
+//print("BEFORE Fork");
 status=Fork();
-print(status);
+status=Fork();
+status=Fork();
+status=Fork();
+status=Fork();
+//print(status);
 print("After Fork");
-print("FORK1");
-print("FORK1");
-print("FORK1");
 
+//status=Exec("odd.xsm");
 return 0;
 }
