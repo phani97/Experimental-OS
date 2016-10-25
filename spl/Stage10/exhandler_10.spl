@@ -1,0 +1,135 @@
+alias cause S0;
+alias vpgnum S1;
+alias ip S2;
+alias physicalsp S3;
+alias start S4;
+alias block_num S5;
+alias free_page S6;
+alias indicator S7;
+alias swapblock S8;
+
+physicalsp=([PTBR+(SP/512)*2]*512)+(SP%512); //getting stack address
+	
+cause=EFR%10; //getting cause of exception (1 byte)
+vpgnum=(EFR/10)%100; //getting BadVirtual Address
+ip=(EFR/1000); //getting IP of process
+
+if(cause!=0) then 
+	if(cause==1) then
+		print("Illegal Instruction");
+	endif;
+	if(cause==2) then
+		print("Illegal Memory Access");
+	endif;
+	if(cause==3) then
+		print("Arithmetic Exception");
+	endif;
+	if(cause==4) then
+		print("Illegal Operands");
+	endif;
+	breakpoint;
+	[physicalsp-1]=10;
+	inline "JMP 11776";
+endif;
+	
+	
+start=PTBR+vpgnum*2; //getting current virtual address
+	
+if([start]==-1) then //user wrong declaration
+	print("Invalid");
+	breakpoint;
+	[physicalsp-1]=10;
+	inline "JMP 11776";
+endif;
+	
+block_num=[start]; //getting block_num to be replaced
+	
+free_page=25;
+while(free_page<64 && [MEM_LIST+free_page]!=0) do //getting free block
+	free_page=free_page+1;
+endwhile;
+breakpoint;
+
+if(free_page==64) then 
+	start=PTBR+vpgnum*2;
+	indicator=vpgnum;
+	while(1) do //implementing second chance algo
+		if(start==MEM_LIST) then
+			start=PAGE_TABLE;
+			indicator=0;
+			
+			continue;
+		endif;
+	
+		if(indicator==3) then
+			start=start+2;
+			indicator=0;
+			
+			continue;
+		endif;
+	
+		if([start+1]=="01" || [start+1]=="11") then
+		
+			if([MEM_LIST+[start]]>1) then
+				start=start+2;
+				indicator=indicator+1;
+				
+				continue;
+			endif;
+			
+			if([start+1]=="11") then
+				[start+1]="01";
+				start=start+2;
+				indicator=indicator+1;
+				
+				continue;
+			endif;
+			
+			free_page=[start]; //victim page
+			
+			swapblock=448;
+			while(swapblock<512 && [DISK_LIST+swapblock]!=0) do //getting free swap block
+				swapblock=swapblock+1;
+			endwhile;
+			
+			if(swapblock==512) then
+				breakpoint;
+				[physicalsp-1]=10;
+				inline "JMP 11776";
+			endif;
+			
+			store(free_page,swapblock); //storing victim page in swap area
+			[DISK_LIST+swapblock]=1; //updating disk_list
+			
+			store(6,20); //storing disk_list
+			breakpoint;
+			
+			[start]=swapblock; //setting page_table of victim
+			[start+1]="00"; 
+			
+			breakpoint;
+			break;
+		endif;
+		
+		start=start+2;
+		indicator=indicator+1;
+	endwhile;
+	
+endif;
+
+load(free_page,block_num); //loading req page
+[MEM_LIST+free_page]=1;
+start=PTBR+vpgnum*2;
+[start]=free_page; //setting page_table
+[start+1]="01";
+
+if(block_num>=448) then
+	[DISK_LIST+block_num]=[DISK_LIST+block_num]-1;
+	store(6,20); //storing disk_list
+endif;
+
+SP=SP+1;
+physicalsp=([PTBR+(SP/512)*2]*512)+(SP%512); //getting stack address
+[physicalsp]=ip;
+breakpoint;
+ireturn;

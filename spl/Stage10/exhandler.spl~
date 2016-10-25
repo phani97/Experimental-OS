@@ -1,0 +1,52 @@
+alias cause S0;
+alias vpgnum S1;
+alias ip S2;
+alias physicalsp S3;
+alias addr S4;
+alias block_num S5;
+alias free_page S5;
+
+physicalsp=([PTBR+(SP/512)*2]*512)+(SP%512); //getting stack address
+	
+cause=EFR%10; //getting cause of exception (1 byte)
+vpgnum=(EFR/10)%100; //getting BadVirtual Address
+ip=(EFR/1000); //getting IP of process
+
+if(cause!=0) then 
+	if(cause==1) then
+		print("Illegal Instruction");
+	endif;
+	if(cause==2) then
+		print("Illegal Memory Access");
+	endif;
+	if(cause==3) then
+		print("Arithmetic Exception");
+	endif;
+	if(cause==4) then
+		print("Illegal Operands");
+	endif;
+	breakpoint;
+	[physicalsp-1]=10;
+	inline "JMP 11776";
+else 
+	
+	
+	addr=PTBR+vpgnum*2; //getting current virtual address
+	
+	if([addr]==-1) then //user wrong declaration
+		print("Invalid");
+		breakpoint;
+		[physicalsp-1]=10;
+		inline "JMP 11776";
+	endif;
+	
+	
+	block_num=[addr]; //getting block_num to be replaced
+	
+	free_page=25;
+	while(free_page<64 && [MEM_LIST+free_page]!=0) do //getting free block
+		free_page=free_page+1;
+	endif;
+	breakpoint;
+	if(free_page==64) then 
+		
