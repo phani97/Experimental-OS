@@ -10,7 +10,7 @@ cpid=(PTBR-1024)/8;
 alias newPCB S4;
 if(syscall==10) then //checking exit or not.....
 
-	
+	print(cpid);
 	alias cpcb S3;
 	
 	cpcb=READY_LIST+cpid*32;

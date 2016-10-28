@@ -42,7 +42,7 @@ if(syscall==8) then //checking fork .....
 	j=count_datablocks;
 	i=0;
 	while(j!=0 && i<64) do //checking freeblocks for free process
-		if([MEM_LIST+i]==1) then 
+		if([MEM_LIST+i]==0) then 
 			j=j-1;
 		endif;
 		i=i+1;

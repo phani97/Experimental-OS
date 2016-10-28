@@ -57,7 +57,7 @@ if(syscall==5) then//syscall is write
 		
 		[DISK_LIST+datablock]=1;
 		[SCRATCHPAD+lseek/512]=datablock;//placing data block
-		[FAT+fatindex*512+1]=[FAT+fatindex*512+1]+512;//increasing file size
+		[FAT+fatindex*8+1]=[FAT+fatindex*8+1]+512;//increasing file size
 		store(1,basicblock); //restoring basicblock
 		store(5,19); //restoring FAT
 		store(6,20); //restoring DISK free list
