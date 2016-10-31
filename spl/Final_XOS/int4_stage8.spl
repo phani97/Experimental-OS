@@ -1,0 +1,82 @@
+alias physicalsp S0;
+physicalsp=([PTBR +(SP/512)*2]*512)+(SP%512);  //getting physical address of SP
+alias syscall S1;
+syscall = [physicalsp-1]; //getting syscall from Stack
+
+if(syscall==5) then//syscall is write
+
+	alias filedescriptor S2;
+	alias wordtowrite S3;
+	
+	filedescriptor=[physicalsp-4];
+	wordtowrite=[physicalsp-3];
+	
+	if(filedescriptor<0 || filedescriptor > 7) //checking filedescriptor is valid r not
+	then 
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias pid S5;
+	pid = (PTBR - 1024)/8;
+	alias systemindex S4;
+	alias lseek S8;
+	systemindex=[READY_LIST + pid*32 +15 + filedescriptor*2];
+	lseek=[READY_LIST + pid*32 +16 + filedescriptor*2];
+	if(systemindex==-1) 
+	then 
+	[physicalsp-2]=-1;
+	ireturn;
+	endif;
+	
+	alias fatindex S6;
+	fatindex=[FILE_TABLE+systemindex*2];
+	
+	alias basicblock S7;
+	basicblock=[FAT+fatindex*8+2];
+	
+	load(1,basicblock);//loading basicblock;
+	
+	alias datablock S9;
+	datablock=[SCRATCHPAD+lseek/512];
+	
+	if(datablock==-1) then //create data block
+		
+		datablock=24;
+		while(datablock<448) do //checking for freeblock
+		if([DISK_LIST+datablock]==0) then
+			break;
+		else datablock=datablock+1;
+		endif;
+		endwhile;
+		
+		if(datablock==448) then //no free block
+		[physicalsp-2]=-1;
+		ireturn;
+		endif;
+		
+		[DISK_LIST+datablock]=1;
+		[SCRATCHPAD+lseek/512]=datablock;//placing data block
+		[FAT+fatindex*8+1]=[FAT+fatindex*8+1]+512;//increasing file size
+		store(1,basicblock); //restoring basicblock
+		store(5,19); //restoring FAT
+		store(6,20); //restoring DISK free list
+	
+	endif;
+	
+	load(1,datablock); //loading datablock
+	
+	[SCRATCHPAD+lseek%512]=wordtowrite; //wriring word
+	
+	store(1,datablock);
+	
+	[READY_LIST + pid*32 +16 + filedescriptor*2]=lseek+1; //incrementing pointer
+	
+	[physicalsp-2]=0;
+	ireturn;
+	
+endif;
+	//endif;endif;
+	
+		
+	

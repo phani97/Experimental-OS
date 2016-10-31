@@ -1,0 +1,166 @@
+alias physicalsp S0;
+
+physicalsp = ([PTBR + (SP/512) * 2]  * 512) + (SP %512);
+
+alias syscall S1;
+
+syscall = [physicalsp -1] ;
+
+if(syscall == 1) 
+	then 
+	//print("file is yet tobe created");
+	alias filename S2;
+	alias i S3;
+	
+	filename = [physicalsp - 3];
+	i=0;
+	while( i< 64) do // checking file in FAT
+		if ( filename == [FAT + i*8] )
+			then 
+			//print("File existed");
+			[physicalsp - 2] = 0;
+			ireturn;
+			
+			else 
+			i=i+1;
+		endif;
+	endwhile;
+	
+	i=24;
+	while(i<=447) do // checking free space in disk_list
+		if( [DISK_LIST + i] == 0 )
+			then break;
+			else i=i+1;
+		endif;
+	endwhile;
+	
+	if( i == 448 ) then 
+		//print(" NO FREE SPACE ");
+		[physicalsp - 2] = -1;
+	endif;
+	
+	alias j S4;
+	
+	j=0;
+	
+	while( j < 64 ) do // checking free space in FAT	
+		if( [FAT + j * 8] == -1) 
+			then break;
+			else j = j + 1;
+		endif;
+	endwhile;
+	
+	if( j == 64) 
+		then //print(" NO SPACE IN FAT");
+		[physicalsp - 2] = -1;
+		ireturn;
+	endif;
+	
+	[ FAT + 8 * j] = filename; // loading file into FAT
+	[ FAT + 8*j +1] = 0;
+	[ FAT + 8*j +2] = i;
+	
+	load(1,i); //loading basic bloack to disk
+	
+	j = 0;
+	while( j < 256 ) do //setting data blocks in basic block -1
+		[ SCRATCHPAD + j ] = -1;
+		j= j + 1;
+	endwhile;
+	
+	store ( 1, i ); //storing basic block in disk
+	
+	[DISK_LIST + i] = 1; //setting block to 1;
+	
+	store (6,20); // storing disk free list
+	store (5,19); //storing FAT in disk
+	
+	[physicalsp - 2] = 0;
+	//print("FILE IS CREATED");
+	ireturn;
+	
+	else 
+	
+	alias filename S2;
+	filename = [physicalsp-3];
+	
+	alias fatindex S3;
+	fatindex=0;
+	
+	while(fatindex<64) do //checking file present r not
+	if([FAT + fatindex*8]==filename)
+	then 
+	//print("file");
+	break;
+	else fatindex=fatindex+1;
+	endif;
+	endwhile;
+	
+	if(fatindex==64) 
+	then 
+	[physicalsp-2]=-1;
+	//print("file not");
+	ireturn;
+	endif;
+	
+	alias systemindex S4;
+	systemindex=0;
+	
+	while(systemindex<64) do //checking file present r not
+	if([FILE_TABLE + systemindex*2]==fatindex)
+	then 
+	[physicalsp-2]=-1;
+	//print("file is opened");
+	ireturn;
+	else systemindex=systemindex+1;
+	endif;
+	endwhile;
+	
+	alias basic_block S9;
+	basic_block=[FAT+fatindex*8 +2];
+	
+	[FAT+fatindex*8]=-1; //setting FAT to -1
+	[FAT+fatindex*8+1]=0;
+	[FAT+fatindex*8+2]=-1;
+	
+	alias i S5;
+	i=0;
+	alias j S6;
+	alias blocknumber S7;
+	while(i<256) do //setting data blocks by empty string
+	
+		load(1,basic_block);
+		blocknumber=[SCRATCHPAD + i];
+	
+		if(blocknumber==-1 || blocknumber=="") then 
+			break;
+		endif;
+		
+		[DISK_LIST + blocknumber]= 0; //setting disk free list
+			
+		load(1,blocknumber);
+		j=0;
+		while(j<512) do 
+			[SCRATCHPAD+j]="";
+			j=j+1;
+		endwhile;
+		store(1,blocknumber); // restoring datablock
+		i=i+1;
+	endwhile;
+	
+	i=0;
+	load(1,basic_block);
+	[DISK_LIST+basic_block]=0; //setting basic block in diskfree list
+	while(i<256) do //setting basic block as empty
+		[SCRATCHPAD+i]="";
+		i=i+1;
+	endwhile;	
+	store(1,basic_block); //restoring basic block
+	
+	store(5,19); //restoring FAT
+	store(6,20); //restoring DISK free list
+	
+	[physicalsp-2]=0;
+	ireturn;
+endif;
+	
